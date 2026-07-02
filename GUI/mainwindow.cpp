@@ -694,8 +694,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	WebSocketServer::logging = settings.value(WEBSOCKET_LOGGING, WebSocketServer::logging).toBool();
 	WebSocketServer::originWhitelist = S(settings.value(WEBSOCKET_ORIGIN_WHITELIST, "").toString());
 
-	WebSocketServer::Start();
 	Host::Start(ProcessConnected, ProcessDisconnected, ThreadAdded, ThreadRemoved, SentenceReceived);
+	WebSocketServer::Start();
 	current = &Host::GetThread(Host::console);
 	Host::AddConsoleOutput(ABOUT);
 
