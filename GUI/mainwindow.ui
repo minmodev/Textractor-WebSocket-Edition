@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Textractor</string>
+   <string>Textractor Websocket Edition</string>
   </property>
   <property name="styleSheet">
    <string notr="true">

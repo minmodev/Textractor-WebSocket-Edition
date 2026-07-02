@@ -106,7 +106,8 @@ const wchar_t* WEBSOCKET_CLIENT_DISCONNECTED = L"WebSocket client disconnected: 
 const wchar_t* WEBSOCKET_CLIENT_REJECTED = L"WebSocket client rejected (origin not allowed): %s";
 const wchar_t* CONSOLE = L"Console";
 const wchar_t* CLIPBOARD = L"Clipboard";
-const wchar_t* ABOUT = L"Textractor " ARCH L" v" VERSION LR"( made by Artikash (email: akashmozumdar@gmail.com)
+const wchar_t* ABOUT = L"Textractor Websocket Edition " ARCH L" v" VERSION LR"( made by Artikash (email: akashmozumdar@gmail.com)
+Websocket Edition fork by minmodev: https://github.com/minmodev
 Project homepage: https://github.com/Artikash/Textractor
 Tutorial video: https://github.com/Artikash/Textractor/blob/master/docs/TUTORIAL.md
 FAQ: https://github.com/Artikash/Textractor/wiki/FAQ

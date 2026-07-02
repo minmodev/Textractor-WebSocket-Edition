@@ -1,5 +1,6 @@
 # Developers
 
+- Textractor Websocket Edition fork (built-in WebSocket server) by [minmodev](https://github.com/minmodev)
 - Textractor mainly made by [Artikash](https://github.com/Artikash) with the contributions of
   - Build system improvements by [DoumanAsh](https://github.com/DoumanAsh)
   - Original text removal in Extra Window by [Niakr1s](https://github.com/Niakr1s)
