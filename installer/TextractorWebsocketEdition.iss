@@ -1,6 +1,8 @@
 ; Inno Setup script for Textractor Websocket Edition.
-; Builds ONE installer that bundles both the x86 and x64 builds and installs
-; whichever matches the user's Windows at install time.
+; Builds ONE installer that installs BOTH the x86 and x64 builds side by
+; side (into x64\ and x86\ subfolders), with separate shortcuts for each.
+; Textractor needs both because the hook injector must match the bitness
+; of the game you're attaching to.
 ;
 ; Prerequisites before compiling this script:
 ;   1. Build both configs first (see docs in the repo root for exact commands):
@@ -16,7 +18,8 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "minmodev (fork of Textractor by Artikash)"
 #define MyAppURL "https://github.com/minmodev/Textractor-WebSocket-Edition"
-#define MyAppExeName "Textractor.exe"
+#define MyAppExeNameX64 "Textractor-x64.exe"
+#define MyAppExeNameX86 "Textractor-x86.exe"
 
 [Setup]
 AppId={{B6E1E9C0-6E0A-4B7C-9E3F-2C9F1E7A9C31}
@@ -48,23 +51,32 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Files]
-; 64-bit build - only installed on 64-bit Windows.
-Source: "..\builds\RelWithDebInfo_x64\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
-    Excludes: "*.pdb,*.lib,*.exp,*.ilk"; Check: Is64BitInstallMode
-; 32-bit build - only installed on 32-bit Windows.
-Source: "..\builds\RelWithDebInfo_x86\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
-    Excludes: "*.pdb,*.lib,*.exp,*.ilk"; Check: not Is64BitInstallMode
+; 64-bit build - always installed, into its own subfolder. Textractor.exe
+; is renamed to Textractor-x64.exe so the two builds are distinguishable
+; if you ever copy/zip the install folder up instead of using shortcuts.
+Source: "..\builds\RelWithDebInfo_x64\Textractor.exe"; DestDir: "{app}\x64"; DestName: "{#MyAppExeNameX64}"; Flags: ignoreversion
+Source: "..\builds\RelWithDebInfo_x64\*"; DestDir: "{app}\x64"; Flags: recursesubdirs ignoreversion; \
+    Excludes: "*.pdb,*.lib,*.exp,*.ilk,Textractor.exe"
+; 32-bit build - always installed, into its own subfolder. Kept separate
+; from x64\ because a 32-bit Qt5Core.dll etc. can't coexist in the same
+; folder as the 64-bit copy of the same filename.
+Source: "..\builds\RelWithDebInfo_x86\Textractor.exe"; DestDir: "{app}\x86"; DestName: "{#MyAppExeNameX86}"; Flags: ignoreversion
+Source: "..\builds\RelWithDebInfo_x86\*"; DestDir: "{app}\x86"; Flags: recursesubdirs ignoreversion; \
+    Excludes: "*.pdb,*.lib,*.exp,*.ilk,Textractor.exe"
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\{#MyAppName} (x64)"; Filename: "{app}\x64\{#MyAppExeNameX64}"
+Name: "{group}\{#MyAppName} (x86)"; Filename: "{app}\x86\{#MyAppExeNameX86}"
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName} (x64)"; Filename: "{app}\x64\{#MyAppExeNameX64}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName} (x86)"; Filename: "{app}\x86\{#MyAppExeNameX86}"; Tasks: desktopicon
 
 [Run]
-; Silently ensure the matching VC++ runtime is present (windeployqt already
-; copied the redistributable installer into each build's output folder).
-Filename: "{app}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; \
-    StatusMsg: "Installing Visual C++ Runtime..."; Check: Is64BitInstallMode; Flags: waituntilterminated skipifdoesntexist
-Filename: "{app}\vc_redist.x86.exe"; Parameters: "/install /quiet /norestart"; \
-    StatusMsg: "Installing Visual C++ Runtime..."; Check: not Is64BitInstallMode; Flags: waituntilterminated skipifdoesntexist
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+; Silently ensure both VC++ runtimes are present (windeployqt already
+; copied the matching redistributable installer into each build's output).
+Filename: "{app}\x64\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; \
+    StatusMsg: "Installing 64-bit Visual C++ Runtime..."; Flags: waituntilterminated skipifdoesntexist
+Filename: "{app}\x86\vc_redist.x86.exe"; Parameters: "/install /quiet /norestart"; \
+    StatusMsg: "Installing 32-bit Visual C++ Runtime..."; Flags: waituntilterminated skipifdoesntexist
+Filename: "{app}\x64\{#MyAppExeNameX64}"; Description: "Launch {#MyAppName} (x64)"; Flags: nowait postinstall skipifsilent unchecked
+Filename: "{app}\x86\{#MyAppExeNameX86}"; Description: "Launch {#MyAppName} (x86)"; Flags: nowait postinstall skipifsilent unchecked
