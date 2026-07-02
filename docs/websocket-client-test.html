@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Textractor WebSocket example</title>
+<style>
+	body { font-family: sans-serif; max-width: 40rem; margin: 2rem auto; }
+	#status { font-weight: bold; }
+	#status.connected { color: green; }
+	#status.disconnected { color: crimson; }
+	#lines { list-style: none; padding: 0; }
+	#lines li { padding: 0.4rem 0; border-bottom: 1px solid #ddd; }
+	#lines .thread { color: #888; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+	<h1>Textractor WebSocket Test</h1>
+	<p>Status: <span id="status" class="disconnected">disconnected</span></p>
+	<ul id="lines"></ul>
+
+	<script>
+		const WEBSOCKET_URL = "ws://127.0.0.1:47892";
+
+		const statusEl = document.getElementById("status");
+		const linesEl = document.getElementById("lines");
+
+		function setStatus(text, connected) {
+			statusEl.textContent = text;
+			statusEl.className = connected ? "connected" : "disconnected";
+		}
+
+		function connect() {
+			const socket = new WebSocket(WEBSOCKET_URL);
+
+			socket.onopen = () => setStatus("connected (waiting for game)", true);
+			socket.onclose = () => {
+				setStatus("disconnected - retrying...", false);
+				setTimeout(connect, 2000); // Textractor may not be running yet, or was just closed
+			};
+			socket.onerror = () => socket.close();
+
+			socket.onmessage = (event) => {
+				const message = JSON.parse(event.data);
+				switch (message.type) {
+					case "connected":
+						console.log(`Connected to Textractor WebSocket server v${message.version}`);
+						break;
+
+					case "status":
+						setStatus(message.status === "attached" ? "connected (game attached)" : "connected (waiting for game)", true);
+						break;
+
+					case "line": {
+						const li = document.createElement("li");
+						li.innerHTML = `<span class="thread">[${message.thread}]</span> ${message.text}`;
+						linesEl.appendChild(li);
+						linesEl.scrollTop = linesEl.scrollHeight;
+						break;
+					}
+
+					case "error":
+						console.error("Textractor WebSocket error:", message.message);
+						break;
+
+					default:
+						// Unknown message type - ignore, so this client keeps working
+						// if the protocol grows new message types later.
+						break;
+				}
+			};
+		}
+
+		connect();
+	</script>
+</body>
+</html>

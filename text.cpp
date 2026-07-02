@@ -95,6 +95,15 @@ const char* FLUSH_DELAY = u8"Flush delay";
 const char* MAX_BUFFER_SIZE = u8"Max buffer size";
 const char* MAX_HISTORY_SIZE = u8"Max history size";
 const char* CONFIG_JP_LOCALE = u8"Launch with JP locale";
+const char* WEBSOCKET_ENABLED = u8"Enable WebSocket server";
+const char* WEBSOCKET_PORT = u8"WebSocket server port";
+const char* WEBSOCKET_ORIGIN_WHITELIST = u8"WebSocket allowed origins (comma separated, blank = allow all)";
+const char* WEBSOCKET_LOGGING = u8"Log WebSocket connections";
+const wchar_t* WEBSOCKET_LISTENING = L"WebSocket server listening on ws://127.0.0.1:%d";
+const wchar_t* WEBSOCKET_LISTEN_FAILED = L"WebSocket server failed to start on port %d: %s";
+const wchar_t* WEBSOCKET_CLIENT_CONNECTED = L"WebSocket client connected: %s";
+const wchar_t* WEBSOCKET_CLIENT_DISCONNECTED = L"WebSocket client disconnected: %s";
+const wchar_t* WEBSOCKET_CLIENT_REJECTED = L"WebSocket client rejected (origin not allowed): %s";
 const wchar_t* CONSOLE = L"Console";
 const wchar_t* CLIPBOARD = L"Clipboard";
 const wchar_t* ABOUT = L"Textractor " ARCH L" v" VERSION LR"( made by Artikash (email: akashmozumdar@gmail.com)

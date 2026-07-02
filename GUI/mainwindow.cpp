@@ -3,6 +3,7 @@
 #include "defs.h"
 #include "module.h"
 #include "extenwindow.h"
+#include "websocketserver.h"
 #include "../host/host.h"
 #include "../host/hookcode.h"
 #include "attachprocessdialog.h"
@@ -65,6 +66,10 @@ extern const char* FLUSH_DELAY;
 extern const char* MAX_BUFFER_SIZE;
 extern const char* MAX_HISTORY_SIZE;
 extern const char* CONFIG_JP_LOCALE;
+extern const char* WEBSOCKET_ENABLED;
+extern const char* WEBSOCKET_PORT;
+extern const char* WEBSOCKET_ORIGIN_WHITELIST;
+extern const char* WEBSOCKET_LOGGING;
 extern const wchar_t* ABOUT;
 extern const wchar_t* CL_OPTIONS;
 extern const wchar_t* LAUNCH_FAILED;
@@ -495,6 +500,8 @@ namespace
 			{ autoAttach, AUTO_ATTACH },
 			{ autoAttachSavedOnly, ATTACH_SAVED_ONLY },
 			{ showSystemProcesses, SHOW_SYSTEM_PROCESSES },
+			{ WebSocketServer::enabled, WEBSOCKET_ENABLED },
+			{ WebSocketServer::logging, WEBSOCKET_LOGGING },
 		})
 		{
 			auto checkBox = new QCheckBox(&dialog);
@@ -507,6 +514,7 @@ namespace
 			{ TextThread::flushDelay, FLUSH_DELAY },
 			{ TextThread::maxHistorySize, MAX_HISTORY_SIZE },
 			{ Host::defaultCodepage, DEFAULT_CODEPAGE },
+			{ WebSocketServer::port, WEBSOCKET_PORT },
 		})
 		{
 			auto spinBox = new QSpinBox(&dialog);
@@ -515,6 +523,14 @@ namespace
 			layout.addRow(label, spinBox);
 			QObject::connect(&saveButton, &QPushButton::clicked, [spinBox, label, &settings, &value] { settings.setValue(label, value = spinBox->value()); });
 		}
+		QLineEdit originWhitelistEdit(S(WebSocketServer::originWhitelist), &dialog);
+		layout.addRow(WEBSOCKET_ORIGIN_WHITELIST, &originWhitelistEdit);
+		QObject::connect(&saveButton, &QPushButton::clicked, [&originWhitelistEdit, &settings]
+		{
+			settings.setValue(WEBSOCKET_ORIGIN_WHITELIST, originWhitelistEdit.text());
+			WebSocketServer::originWhitelist = S(originWhitelistEdit.text());
+		});
+		QObject::connect(&saveButton, &QPushButton::clicked, &WebSocketServer::Start); // restart with any new settings above
 		QComboBox localeCombo(&dialog);
 		assert(PROMPT == 0 && ALWAYS == 1 && NEVER == 2);
 		localeCombo.addItems({ { "Prompt", "Always", "Never" } });
@@ -545,6 +561,7 @@ namespace
 	void ProcessConnected(DWORD processId)
 	{
 		alreadyAttached.insert(processId);
+		WebSocketServer::NotifyProcessAttached();
 
 		QString process = S(GetModuleFilename(processId).value_or(L"???"));
 		QMetaObject::invokeMethod(This, [process, processId]
@@ -566,6 +583,7 @@ namespace
 
 	void ProcessDisconnected(DWORD processId)
 	{
+		WebSocketServer::NotifyProcessDetached();
 		QMetaObject::invokeMethod(This, [processId]
 		{
 			ui.processCombo->removeItem(ui.processCombo->findText(QString::number(processId, 16).toUpper() + ":", Qt::MatchStartsWith));
@@ -602,6 +620,7 @@ namespace
 	{
 		for (int i = 0; i < sentence.size(); ++i) if (sentence[i] == '\r' && sentence[i + 1] == '\n') sentence[i] = 0x200b; // for some reason \r appears as newline - no need to double
 		if (!DispatchSentenceToExtensions(sentence, GetSentenceInfo(thread).data())) return false;
+		WebSocketServer::BroadcastLine(thread, sentence);
 		sentence += L'\n';
 		if (&thread == current) QMetaObject::invokeMethod(This, [sentence = S(sentence)]() mutable
 		{
@@ -670,7 +689,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	TextThread::maxBufferSize = settings.value(MAX_BUFFER_SIZE, TextThread::maxBufferSize).toInt();
 	TextThread::maxHistorySize = settings.value(MAX_HISTORY_SIZE, TextThread::maxHistorySize).toInt();
 	Host::defaultCodepage = settings.value(DEFAULT_CODEPAGE, Host::defaultCodepage).toInt();
+	WebSocketServer::enabled = settings.value(WEBSOCKET_ENABLED, WebSocketServer::enabled).toBool();
+	WebSocketServer::port = settings.value(WEBSOCKET_PORT, WebSocketServer::port).toInt();
+	WebSocketServer::logging = settings.value(WEBSOCKET_LOGGING, WebSocketServer::logging).toBool();
+	WebSocketServer::originWhitelist = S(settings.value(WEBSOCKET_ORIGIN_WHITELIST, "").toString());
 
+	WebSocketServer::Start();
 	Host::Start(ProcessConnected, ProcessDisconnected, ThreadAdded, ThreadRemoved, SentenceReceived);
 	current = &Host::GetThread(Host::console);
 	Host::AddConsoleOutput(ABOUT);
@@ -693,6 +717,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 MainWindow::~MainWindow()
 {
 	Settings().setValue(WINDOW, geometry());
+	WebSocketServer::Stop();
 	CleanupExtensions();
 	SetErrorMode(SEM_NOGPFAULTERRORBOX);
 	ExitProcess(0);
